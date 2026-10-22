@@ -1,0 +1,232 @@
+<title>DVAG TBK migrierte DBs</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: header + timeframe switch, three summary figures, one table grouped by team (team band, DB rows, subtotal), then the list of open contracts */
+:root{--bg:#f5f6f8;--fg:#1b2430;--muted:#5e6b7a;--line:#d8dde4;--card:#fff;--team:#16324f;--team-fg:#fff;--sub:#e9edf2;--open:#a8461a;--open-bg:#fbebe2;--ok:#0e6a4c;--accent:#1f5f8f;
+--sans:"IBM Plex Sans",system-ui,"Segoe UI",sans-serif;--mono:"IBM Plex Mono",ui-monospace,Consolas,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f151c;--fg:#e2e7ed;--muted:#97a4b4;--line:#2a3542;--card:#161f29;--team:#24486e;--team-fg:#f1f5f9;--sub:#1d2733;--open:#f19c74;--open-bg:#3a2216;--ok:#5fc29b;--accent:#74b4e0;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f151c;--fg:#e2e7ed;--muted:#97a4b4;--line:#2a3542;--card:#161f29;--team:#24486e;--team-fg:#f1f5f9;--sub:#1d2733;--open:#f19c74;--open-bg:#3a2216;--ok:#5fc29b;--accent:#74b4e0;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:14px/1.5 var(--sans);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px}
+main{max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:20px;min-width:0}
+h1{font-size:24px;line-height:1.2;margin:0 0 4px;text-wrap:balance}
+h2{font-size:17px;margin:0 0 8px}
+.meta{color:var(--muted);font-size:13px;margin:0}
+.bar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--card)}
+.seg button{font:500 13px var(--sans);border:0;background:transparent;color:var(--fg);padding:7px 14px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--team);color:var(--team-fg)}
+.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:12px 14px}
+.tile .lbl{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.tile .val{font:600 28px/1.2 var(--sans);font-variant-numeric:tabular-nums;margin-top:4px}
+.tile .sub{font-size:12px;color:var(--muted)}
+.tile.open .val{color:var(--open)}
+.scroll{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:6px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:560px}
+th,td{padding:6px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);font-weight:600}
+th.grp{text-align:center;border-bottom:2px solid var(--line)}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+td.sep,th.sep{border-left:1px solid var(--line)}
+tr.team td{background:var(--team);color:var(--team-fg);font-weight:600}
+tr.subtotal td{background:var(--sub);font-weight:600}
+tr.grand td{background:var(--team);color:var(--team-fg);font-weight:600}
+td.z{color:var(--muted)}
+td.openv{color:var(--open);font-weight:600}
+.note{font-size:12.5px;color:var(--muted)}
+.list{font-size:13px}
+.list td.id{font-family:var(--mono)}
+.wide{max-width:1560px;margin:20px auto 0;min-width:0}
+.list{min-width:1100px}
+.list td.cmt{white-space:normal;min-width:360px}
+.list td.noname{color:var(--muted);font-style:italic}
+.chip{display:inline-block;font-size:11.5px;font-weight:600;padding:1px 7px;border-radius:999px;background:var(--open-bg);color:var(--open)}
+</style>
+<main>
+<header>
+<h1>DVAG TBK migrierte DBs</h1>
+<p class="meta">Nur migrierte DBs · Teams Axel Thieler und Emil Eyyi · Stand 22.10.2026, 13:15 Uhr</p>
+</header>
+
+<div class="bar">
+<div style="display:flex;flex-wrap:wrap;gap:10px">
+<div class="seg" role="group" aria-label="Zeitraum" id="seg-tf">
+<button type="button" id="tf-today" data-tf="today" aria-pressed="false">Heute 22.10.</button>
+<button type="button" id="tf-yday" data-tf="yday" aria-pressed="false">Gestern 21.10.</button>
+<button type="button" id="tf-month" data-tf="month" aria-pressed="true">Dieser Monat (Okt.)</button>
+</div>
+<div class="seg" role="group" aria-label="Produkt" id="seg-pr">
+<button type="button" id="pr-all" data-pr="all" aria-pressed="true">PV + HP</button>
+<button type="button" id="pr-pv" data-pr="pv" aria-pressed="false">PV</button>
+<button type="button" id="pr-hp" data-pr="hp" aria-pressed="false">HP</button>
+</div>
+</div>
+<p class="note">TBK SF/PD: Salesforce (PV) und Pipedrive (HP), Daten bis 21.10. · SalesOS: bis 22.10., 13:10 Uhr</p>
+</div>
+
+<section class="tiles" aria-label="Übersicht">
+<div class="tile"><div class="lbl">TBK in SF / PD</div><div class="val" id="t-tbk">0</div><div class="sub" id="t-tbk-s"></div></div>
+<div class="tile open"><div class="lbl">In SalesOS unterschrieben, noch nicht in SF / PD</div><div class="val" id="t-open">0</div><div class="sub" id="t-open-s"></div></div>
+<div class="tile"><div class="lbl">TBK inkl. SalesOS</div><div class="val" id="t-all">0</div><div class="sub">TBK in SF / PD + in SalesOS unterschrieben, noch nicht synchronisiert</div></div>
+</section>
+
+<section>
+<div class="scroll"><table id="main">
+<thead>
+<tr><th>DB</th><th class="n sep">TBK in SF / PD</th><th class="n sep">In SalesOS unterschrieben, noch nicht in SF / PD</th><th class="n sep">TBK inkl. SalesOS</th></tr>
+</thead>
+<tbody id="rows"></tbody>
+</table></div>
+</section>
+
+</main>
+<div class="wide">
+<section>
+<h2>In SalesOS unterschrieben, noch nicht in SF / PD</h2>
+<div class="scroll"><table class="list">
+<thead><tr><th>Team</th><th>DB</th><th>Kunde</th><th>Opportunity</th><th>Produkt</th><th>Auftragsnummer</th><th>Final Contract Status Task abgeschlossen (MEZ)</th><th>Kommentar</th></tr></thead>
+<tbody id="open"></tbody>
+</table></div>
+</section>
+
+<section style="margin-top:24px">
+<h2>Bereits TBK in SF / PD</h2>
+<div class="scroll"><table class="list">
+<thead><tr><th>Team</th><th>DB</th><th>Kunde</th><th>Opportunity</th><th>Produkt</th><th>Auftragsnummer</th><th>Final Contract Status Task abgeschlossen (MEZ)</th><th>Kommentar</th></tr></thead>
+<tbody id="done"></tbody>
+</table></div>
+</section>
+</div>
+
+<script>
+const TEAMS = [
+ {team:"Axel Thieler", dbs:["Marc Nagel","Heiko Sommer","Norbert Stachyra","Dominique Ludwig","Diana Walther","Alexander Gradinger","Suzan Reichberg","Axel Thieler"]},
+ {team:"Emil Eyyi", dbs:["Oliver Ramer","Jason Betz","Salomon Ghebremeskel","Jakob Göring","Özkan Tunca","Kai Schmitz"]}
+];
+// TBK in SF / PD (INT_DVAG_INTERNAL_COMMISSIONS): [pv, hp] per timeframe
+const TBK = {
+ "Alexander Gradinger":{today:[0,0],yday:[0,0],month:[3,1]},
+ "Diana Walther":{today:[0,0],yday:[0,0],month:[0,0]},
+ "Dominique Ludwig":{today:[0,0],yday:[0,0],month:[1,1]},
+ "Heiko Sommer":{today:[0,0],yday:[0,0],month:[1,2]},
+ "Marc Nagel":{today:[0,0],yday:[1,2],month:[8,14]},
+ "Norbert Stachyra":{today:[0,0],yday:[1,1],month:[5,4]},
+ "Suzan Reichberg":{today:[0,0],yday:[0,0],month:[4,4]},
+ "Jakob Göring":{today:[0,0],yday:[0,0],month:[3,3]},
+ "Jason Betz":{today:[0,0],yday:[1,0],month:[2,4]},
+ "Kai Schmitz":{today:[0,0],yday:[0,0],month:[2,1]},
+ "Oliver Ramer":{today:[0,0],yday:[1,1],month:[8,3]},
+ "Salomon Ghebremeskel":{today:[0,0],yday:[0,0],month:[3,4]},
+ "Özkan Tunca":{today:[0,0],yday:[0,0],month:[3,4]},
+ "Aleksandra Cakici":{today:[0,0],yday:[1,2],month:[5,7]},
+ "Aurelie Mattmüller":{today:[0,0],yday:[0,0],month:[2,0]},
+ "Martin Svitek":{today:[0,0],yday:[0,0],month:[2,2]},
+ "Philipp Wiedenhaus":{today:[0,0],yday:[0,0],month:[2,5]},
+ "Scarlet Chouh":{today:[0,0],yday:[1,1],month:[2,2]},
+ "Stefan Minetzke":{today:[0,0],yday:[0,0],month:[1,1]}
+};
+// Signed in SalesOS (first close task 75 / 84), not yet a TBK in SF / PD
+const OPEN = [
+ ["Axel Thieler","Heiko Sommer","41915","HP","DEHP4002483674","1515603","2026-10-21 17:51","Subsidy Open heute erreicht (22.10., 09:09 Uhr); TBK erscheint nach der nächsten Aktualisierung der Provisionstabelle"],
+ ["Axel Thieler","Heiko Sommer","41915","PV","DEPV6002483673","","2026-10-21 18:07","Keine Salesforce-Opportunity zu diesem Auftrag: noch nicht nach Salesforce exportiert"],
+ ["Axel Thieler","Marc Nagel","40515","HP","DEHP6002393050","no deal","2026-10-20 09:43","Kein Pipedrive-Deal: nicht nach Pipedrive exportiert"],
+ ["Axel Thieler","Marc Nagel","42684","PV","DEPV7002494548","","2026-10-20 20:17","Keine Salesforce-Opportunity zu diesem Auftrag: noch nicht nach Salesforce exportiert"],
+ ["Axel Thieler","Marc Nagel","42684","HP","DEHP5002494549","no deal","2026-10-20 20:17","Kein Pipedrive-Deal: nicht nach Pipedrive exportiert"],
+ ["Axel Thieler","Marc Nagel","38061","HP","DEHP6002300744","1384435","2026-10-20 20:25","Subsidy Open heute erreicht (22.10., 09:11 Uhr); TBK erscheint nach der nächsten Aktualisierung der Provisionstabelle"],
+ ["Axel Thieler","Norbert Stachyra","36669","PV","DEPV5002126420","","2026-10-12 10:49","DocumentCollection seit 07.10. offen, nicht abgeschlossen (ein früherer Fall wurde verworfen)"],
+ ["Axel Thieler","Norbert Stachyra","37559","HP","DEHP8002279586","1376630","2026-10-16 14:54","Deal in Phase Handover & QA by Partner Portal seit 16.10.; Subsidy Open nicht erreicht"],
+ ["Axel Thieler","Norbert Stachyra","40912","HP","DEHP1002438895","1512747","2026-10-20 20:27","Deal in Phase Handover & QA by Partner Portal; Subsidy Open nicht erreicht"],
+ ["Axel Thieler","Norbert Stachyra","39466","HP","DEHP2002328962","1398099","2026-10-22 11:11","Deal noch in Phase Erstberatung Open; Subsidy Open nicht erreicht"],
+ ["Axel Thieler","Norbert Stachyra","43570","HP","DEHP5002506905","no deal","2026-10-22 11:11","Kein Pipedrive-Deal: nicht nach Pipedrive exportiert"],
+ ["Axel Thieler","Suzan Reichberg","43602","HP","DEHP3001986737","1233462","2026-10-20 20:21","In SalesOS am 20.10. unterschrieben; Pipedrive-Deal noch in Phase FBU & Vertragsunterschrift (seit 12.08., vor der Migration): Unterschrift nicht synchronisiert, Subsidy Open nicht erreicht"],
+ ["Emil Eyyi","Jakob Göring","47678","HP","DEHP6002283476","1378276","2026-10-22 13:08","In SalesOS am 22.10. unterschrieben; Pipedrive-Deal noch in Phase FBU & Vertragsunterschrift (seit 26.09.): Unterschrift nicht synchronisiert, Subsidy Open nicht erreicht"],
+ ["Emil Eyyi","Jason Betz","47952","HP","DEHP3001043733","740009","2026-10-20 20:22","In SalesOS am 20.10. unterschrieben; Pipedrive-Deal noch in Phase FBU & Vertragsunterschrift (seit 13.10.): Unterschrift nicht synchronisiert, Subsidy Open nicht erreicht"],
+ ["Emil Eyyi","Jason Betz","47863","HP","DEHP4002407821","1433400","2026-10-20 20:22","Deal in Phase Waiting for MVT Vertrag from PV (Cross-Sales) seit 15.10.; Subsidy Open nicht erreicht"],
+ ["Emil Eyyi","Jason Betz","28342","PV","DEPV0001033556","","2026-10-21 17:51","DocumentCollection offen (neuer Fall seit 16.10., älterer Fall seit 02.03. offen), nicht abgeschlossen"],
+ ["Emil Eyyi","Jason Betz","47862","PV","DE004199877","","2026-10-21 17:51","DocumentCollection wieder geöffnet (Fall seit 05.10.), nicht abgeschlossen"],
+ ["Emil Eyyi","Jason Betz","48084","PV","DE004721361","","2026-10-22 11:06","DocumentCollection seit 08.10. offen, nicht abgeschlossen"],
+ ["Emil Eyyi","Jason Betz","48084","HP","DEHP6002243584","1359577","2026-10-22 11:07","Deal in Phase Handover & QA by Partner Portal seit 22.10.; Subsidy Open nicht erreicht"],
+ ["Emil Eyyi","Oliver Ramer","49868","HP","DEHP8002330325","1398577","2026-10-20 20:15","In SalesOS am 20.10. unterschrieben; Pipedrive-Deal noch in Phase FBU & Vertragsunterschrift (seit 06.10.): Unterschrift nicht synchronisiert, Subsidy Open nicht erreicht"],
+ ["Emil Eyyi","Oliver Ramer","48047","PV","DE004863617","","2026-10-20 20:27","DocumentCollection seit 09.10. offen, nicht abgeschlossen"],
+ ["Emil Eyyi","Oliver Ramer","48047","HP","DEHP2002432751","1446230","2026-10-20 20:27","Deal in Phase Handover & QA by Partner Portal seit 21.10.; Subsidy Open nicht erreicht"],
+ ["Emil Eyyi","Oliver Ramer","47176","HP","DEHP3002083153","1283321","2026-10-22 11:14","In SalesOS am 22.10. unterschrieben; Pipedrive-Deal noch in Phase FBU & Vertragsunterschrift (seit 09.09., vor der Migration): Unterschrift nicht synchronisiert, Subsidy Open nicht erreicht"],
+ ["Emil Eyyi","Oliver Ramer","48317","HP","DEHP0002396532","1428950","2026-10-22 13:08","In SalesOS am 22.10. unterschrieben; Pipedrive-Deal nach kurzem Gegensignatur Pending am 21.10. wieder in Phase FBU & Vertragsunterschrift: Subsidy Open nicht erreicht"],
+ ["Emil Eyyi","Salomon Ghebremeskel","35813","PV","DEPV2002005844","","2026-10-22 11:14","DocumentCollection seit 29.07. offen, nicht abgeschlossen"]
+];
+// Customer name per opportunity and product (HP: Pipedrive deal, else Airtable; PV: Airtable)
+const CUSTOMER = {
+ "41915|HP":"Christian Witzke","41915|PV":"Christian Witzke",
+ "38061|HP":"Herbert Klaus-Peter Beckmann","36669|PV":"Giuseppina Piro","37559|HP":"Kristin Püschel-Suhomski",
+ "40912|HP":"Aaron Czerwinski","39466|HP":"Barbara Szymanski","43602|HP":"Heiner Lennackers","47678|HP":"Karina Legler",
+ "47952|HP":"Mirsad Kurtali","47863|HP":"Florin-Dan Suciu","28342|PV":"Mirsad Kurtali","47862|PV":"Johannes Ruf",
+ "48084|PV":"Roswitha Kreischer","48084|HP":"Roswitha Kreischer","49868|HP":"Volker Thiele","48047|PV":"Timm Bustorf",
+ "48047|HP":"Timm Bustorf","47176|HP":"Angelika Kümml","48317|HP":"Jutta Choma","35813|PV":"Christian Emanuel Schoenenberg"
+};
+const DAY = {today:"2026-10-22", yday:"2026-10-21"};
+function inTf(ts, tf){ return tf === "month" ? ts.startsWith("2026-10") : ts.startsWith(DAY[tf]); }
+function openCounts(db, tf){
+ let pv = 0, hp = 0;
+ for (const r of OPEN) if (r[1] === db && inTf(r[6], tf)) { if (r[3] === "PV") pv++; else hp++; }
+ return [pv, hp];
+}
+let TF = "month", PR = "all";
+function pick(pair){ return PR === "pv" ? pair[0] : PR === "hp" ? pair[1] : pair[0] + pair[1]; }
+function cell(v, cls){ const c = (v === 0 ? "z" : "") + (cls ? " " + cls : ""); return `<td class="n ${c}">${v}</td>`; }
+function row(label, t, o, rowCls){
+ return `<tr class="${rowCls || ""}"><td>${label}</td>${cell(t, "sep")}${cell(o, "sep" + (o ? " openv" : ""))}${cell(t + o, "sep")}</tr>`;
+}
+function render(){
+ const tf = TF;
+ let html = "", grand = [0,0,0,0];
+ for (const g of TEAMS){
+  html += `<tr class="team"><td colspan="4">${g.team}</td></tr>`;
+  let s = [0,0,0,0];
+  for (const db of g.dbs){
+   const t = (TBK[db] || {})[tf] || [0,0]; const o = openCounts(db, tf);
+   s[0]+=t[0]; s[1]+=t[1]; s[2]+=o[0]; s[3]+=o[1];
+   html += row(db, pick(t), pick(o));
+  }
+  html += row(`Zwischensumme Team ${g.team}`, pick([s[0], s[1]]), pick([s[2], s[3]]), "subtotal");
+  grand = grand.map((v, i) => v + s[i]);
+ }
+ html += row("Gesamt migrierte DBs", pick([grand[0], grand[1]]), pick([grand[2], grand[3]]), "grand");
+ document.getElementById("rows").innerHTML = html;
+ const tbk = pick([grand[0], grand[1]]), op = pick([grand[2], grand[3]]);
+ document.getElementById("t-tbk").textContent = tbk;
+ document.getElementById("t-tbk-s").textContent = PR === "all" ? `PV ${grand[0]} · HP ${grand[1]}` : (PR === "pv" ? "nur PV" : "nur HP");
+ document.getElementById("t-open").textContent = op;
+ document.getElementById("t-open-s").textContent = PR === "all" ? `PV ${grand[2]} · HP ${grand[3]}` : (PR === "pv" ? "nur PV" : "nur HP");
+ document.getElementById("t-all").textContent = tbk + op;
+ const list = OPEN.filter(r => inTf(r[6], tf) && (PR === "all" || r[3] === PR.toUpperCase())).sort((a, b) => a[0].localeCompare(b[0]) || a[1].localeCompare(b[1]) || a[6].localeCompare(b[6]));
+ document.getElementById("open").innerHTML = list.length ? list.map(r => {
+  const d = r[6].slice(8,10) + "." + r[6].slice(5,7) + " " + r[6].slice(11);
+  const cust = CUSTOMER[r[2] + "|" + r[3]];
+  const custCell = cust ? `<td>${cust}</td>` : `<td class="noname">Name wird ergänzt</td>`;
+  return `<tr><td>${r[0]}</td><td>${r[1]}</td>${custCell}<td class="id">${r[2]}</td><td>${r[3]}</td><td class="id">${r[4]}</td><td>${d}</td><td class="cmt">${r[7]}</td></tr>`;
+ }).join("") : `<tr><td colspan="8" class="note">Keine offenen Verträge in diesem Zeitraum.</td></tr>`;
+ document.querySelectorAll("#seg-tf button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.tf === TF)));
+ document.querySelectorAll("#seg-pr button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.pr === PR)));
+}
+const DONE = [["Aleksandra Cakici", "PV", "Jörg Broghammer", "", "DE004389234", "", "2026-10-01"], ["Aleksandra Cakici", "HP", "Andreas Aldinger", "50273", "DEHP9002157650", "", "2026-10-07"], ["Aleksandra Cakici", "HP", "Bruno Bronzolino", "50348", "DEHP1002354334", "", "2026-10-07"], ["Aleksandra Cakici", "PV", "Olaf Stadelbacher", "51419", "DE004786569", "", "2026-10-09"], ["Aleksandra Cakici", "HP", "Olaf Stadelbacher", "51419", "DEHP8002323546", "", "2026-10-12"], ["Aleksandra Cakici", "HP", "Marlies Martina Krüger", "", "DEHP5002392386", "", "2026-10-13"], ["Aleksandra Cakici", "PV", "Thomas Rosam", "36054", "DEPV3002038797", "", "2026-10-15"], ["Aleksandra Cakici", "PV", "Marco Winkenbach", "40705", "DEPV6002390198", "", "2026-10-16"], ["Aleksandra Cakici", "HP", "Claude Rinderknecht", "50586", "DEHP2002443976", "", "2026-10-19"], ["Aleksandra Cakici", "HP", "Jürgen Seußler", "51292", "DEHP3002417142", "", "2026-10-21"], ["Aleksandra Cakici", "PV", "Heiko Lörsch", "51131", "DE004811851", "", "2026-10-21"], ["Aleksandra Cakici", "HP", "Heiko Lörsch", "51131", "DEHP4002359066", "", "2026-10-21"], ["Alexander Gradinger", "PV", "David Möller", "40801", "DEPV6002399943", "2026-10-09 11:26", "2026-10-09"], ["Alexander Gradinger", "PV", "Johannes Michel", "43276", "DE004805764", "2026-10-12 10:52", "2026-10-12"], ["Alexander Gradinger", "HP", "Johannes Michel", "43276", "DEHP1002352212", "2026-10-13 12:19", "2026-10-16"], ["Alexander Gradinger", "PV", "Haike Kästner", "40946", "DEPV5002417438", "2026-10-17 15:07", "2026-10-17"], ["Aurelie Mattmüller", "PV", "Thomas Utz", "33940", "DEPV0001781209", "", "2026-10-08"], ["Aurelie Mattmüller", "PV", "Heike Aloisia Steidle", "38055", "DEPV0002291945", "", "2026-10-09"], ["Dominique Ludwig", "PV", "Sebastian Schönbrunn", "35191", "DEPV7001930852", "2026-09-30 21:04", "2026-10-19"], ["Dominique Ludwig", "HP", "Romy Trenkelbach", "40642", "DEHP2002373327", "2026-10-20 09:39", "2026-10-20"], ["Heiko Sommer", "PV", "Nicolae-Martin Costea", "36931", "DEPV0002164301", "2026-10-09 20:00", "2026-10-19"], ["Heiko Sommer", "HP", "Marcel Hentzschel", "31399", "DEHP8002444317", "2026-10-19 18:08", "2026-10-20"], ["Heiko Sommer", "HP", "Ronny Dietrich", "40128", "DEHP6002313336", "2026-10-12 12:43", "2026-10-20"], ["Jakob Göring", "HP", "Stefan Loff", "46330", "DEHP9002034777", "2026-10-02 02:00", "2026-10-02"], ["Jakob Göring", "PV", "Stefan Loff", "46330", "DE004535076", "2026-10-02 00:00", "2026-10-02"], ["Jakob Göring", "HP", "Johannes Guldan", "48284", "DEHP4001952435", "2026-07-31 17:32", "2026-10-12"], ["Jakob Göring", "HP", "Michael Guldan", "48312", "DEHP2002065239", "2026-10-12 02:00", "2026-10-12"], ["Jakob Göring", "PV", "Stefan Hufnagel", "41008", "DEPV5002433693", "2026-10-15 16:16", "2026-10-16"], ["Jakob Göring", "PV", "Carmen Hofmann", "35360", "DEPV4001958121", "", "2026-10-20"], ["Jason Betz", "PV", "Johanna Pitters", "29340", "DEPV3001202232", "", "2026-10-02"], ["Jason Betz", "HP", "Benno Herbert Ernst Schindela", "46281", "DEHP0001872515", "2026-10-02 02:00", "2026-10-02"], ["Jason Betz", "HP", "Carlo Dausend", "50373", "DEHP8002316089", "", "2026-10-02"], ["Jason Betz", "HP", "Thomas Wittlich", "47658", "DEHP9002252181", "2026-10-08 02:00", "2026-10-08"], ["Jason Betz", "HP", "Michael Benz", "46741", "DEHP1000999416", "2026-10-12 02:00", "2026-10-12"], ["Jason Betz", "PV", "Florin-Dan Suciu", "47863", "DE004847674", "2026-10-20 20:22", "2026-10-21"], ["Kai Schmitz", "PV", "Sina Eckert", "47665", "DE004808150", "2026-10-13 07:39", "2026-10-10"], ["Kai Schmitz", "HP", "Sina Eckert", "47665", "DEHP0002353844", "2026-10-13 09:34", "2026-10-10"], ["Kai Schmitz", "PV", "Erich Johannes Traa", "37804", "DEPV6002283631", "2026-10-20 20:22", "2026-10-20"], ["Marc Nagel", "HP", "Blerim Gutaj", "43308", "DEHP2002283826", "2026-10-01 20:18", "2026-10-01"], ["Marc Nagel", "HP", "Andrea Gerda Jabs", "39351", "DEHP7002284574", "2026-10-02 09:03", "2026-10-05"], ["Marc Nagel", "PV", "Inga Isphording-Wache", "36254", "DEPV6002070644", "2026-10-09 14:40", "2026-10-09"], ["Marc Nagel", "PV", "Matthias Kröhl", "38978", "DE004496728", "2026-10-09 10:57", "2026-10-09"], ["Marc Nagel", "PV", "Tobias Johannes Hein", "41169", "DEPV1002454121", "2026-10-14 13:55", "2026-10-14"], ["Marc Nagel", "HP", "Matthias Kröhl", "38978", "DEHP6001992826", "2026-10-12 12:47", "2026-10-14"], ["Marc Nagel", "HP", "Susanne Burmester", "43043", "DEHP2002025941", "2026-10-15 18:28", "2026-10-15"], ["Marc Nagel", "PV", "Christian Damm", "38933", "DE004758908", "2026-10-15 08:39", "2026-10-15"], ["Marc Nagel", "HP", "Christian Damm", "38933", "DEHP1002289013", "2026-10-15 08:41", "2026-10-15"], ["Marc Nagel", "HP", "Mark Walz", "38825", "DEHP5002276315", "2026-10-12 12:41", "2026-10-16"], ["Marc Nagel", "HP", "Jens Matthias Schröter", "40497", "DEHP7002357688", "2026-10-16 09:10", "2026-10-16"], ["Marc Nagel", "HP", "Tobias Johannes Hein", "41169", "DEHP7002454123", "2026-10-14 13:57", "2026-10-16"], ["Marc Nagel", "HP", "Damaris Marlem Bechtoldt", "41260", "DEHP6002475772", "2026-10-19 09:40", "2026-10-19"], ["Marc Nagel", "PV", "Damaris Marlem Bechtoldt", "41260", "DEPV8002475771", "2026-10-19 09:39", "2026-10-19"], ["Marc Nagel", "PV", "Sascha Fedai", "40834", "DEPV7002412331", "2026-10-20 10:01", "2026-10-20"], ["Marc Nagel", "PV", "Tobias Schulze", "37529", "DEPV7002269007", "2026-10-19 09:45", "2026-10-20"], ["Marc Nagel", "HP", "Martina Bujok", "41137", "DEHP5002454157", "2026-10-19 17:52", "2026-10-20"], ["Marc Nagel", "HP", "Sascha Fedai", "40834", "DEHP5002412332", "2026-10-20 10:02", "2026-10-20"], ["Marc Nagel", "HP", "Eric Weiß", "32738", "DEHP7002241711", "2026-10-20 13:48", "2026-10-20"], ["Marc Nagel", "HP", "Jennifer Becker", "36381", "DEHP5002130592", "2026-10-20 20:13", "2026-10-21"], ["Marc Nagel", "PV", "Klaus-Peter Beckmann", "38061", "DEPV3002297446", "2026-10-20 20:25", "2026-10-21"], ["Marc Nagel", "HP", "Vincenzo Deidda", "35167", "DEHP6002094211", "2026-10-20 20:11", "2026-10-21"], ["Martin Svitek", "HP", "Muhammet Gökkaya", "51579", "DEHP9002387892", "", "2026-10-15"], ["Martin Svitek", "PV", "Beate Fischer", "", "DE004531639", "", "2026-10-15"], ["Martin Svitek", "PV", "Adam Held", "50264", "DE004547486", "", "2026-10-20"], ["Martin Svitek", "HP", "Adam Held", "50264", "DEHP0002048057", "", "2026-10-20"], ["Norbert Stachyra", "PV", "Maurice Zunkel", "38236", "DEPV5002307166", "2026-10-12 10:27", "2026-10-12"], ["Norbert Stachyra", "PV", "Jeannett Ulrich", "40016", "DE004769123", "2026-10-12 10:29", "2026-10-12"], ["Norbert Stachyra", "HP", "Christian Grothe", "31525", "DEHP2002235699", "2026-10-02 08:59", "2026-10-13"], ["Norbert Stachyra", "HP", "Jeannett Ulrich", "40016", "DEHP0002303463", "2026-10-13 11:45", "2026-10-15"], ["Norbert Stachyra", "PV", "Ronald Hartwig", "40940", "DEPV4002419211", "2026-10-16 14:52", "2026-10-16"], ["Norbert Stachyra", "PV", "Marko Lausmann", "38296", "DEPV5002310003", "2026-10-14 15:07", "2026-10-20"], ["Norbert Stachyra", "HP", "Ronald Hartwig", "40940", "DEHP2002419212", "2026-10-16 16:43", "2026-10-20"], ["Norbert Stachyra", "PV", "Kristin Püschel-Suhomski", "37559", "DEPV4002273176", "2026-10-16 14:53", "2026-10-21"], ["Norbert Stachyra", "HP", "Sylvia Schenk-Wolter", "40754", "DEHP4002403955", "2026-10-20 20:12", "2026-10-21"], ["Oliver Ramer", "HP", "Regina Marquard", "47005", "DEHP3001994450", "2026-10-01 02:00", "2026-10-01"], ["Oliver Ramer", "HP", "Bettina Röthlein", "46289", "DEHP2002172545", "2026-10-02 02:00", "2026-10-02"], ["Oliver Ramer", "PV", "Bettina Röthlein", "46289", "DE004662644", "2026-10-07 00:00", "2026-10-02"], ["Oliver Ramer", "PV", "Jutta Choma", "48317", "DE004838967", "2026-10-09 23:27", "2026-10-08"], ["Oliver Ramer", "PV", "Gerhard Winheim", "31969", "DEPV9001555749", "2026-10-21 12:14", "2026-10-09"], ["Oliver Ramer", "PV", "Wolfgang Kümml", "47176", "DE004577463", "", "2026-10-19"], ["Oliver Ramer", "PV", "Tobias Gärtner", "48081", "DE004780012", "2026-10-20 19:46", "2026-10-19"], ["Oliver Ramer", "PV", "Friedhelm Müller", "41501", "DEPV2002473690", "2026-10-20 10:46", "2026-10-20"], ["Oliver Ramer", "PV", "Volker Thiele", "49868", "DE004791772", "2026-10-20 19:50", "2026-10-20"], ["Oliver Ramer", "HP", "Tobias Gärtner", "48081", "DEHP1002352189", "2026-10-20 10:13", "2026-10-21"], ["Oliver Ramer", "PV", "Dominik Mahr", "40353", "DEPV0002352665", "2026-10-20 14:04", "2026-10-21"], ["Philipp Wiedenhaus", "HP", "Andreas Liebmann", "50303", "DEHP5002103541", "", "2026-10-02"], ["Philipp Wiedenhaus", "PV", "Andreas Liebmann", "50303", "DE004600623", "", "2026-10-02"], ["Philipp Wiedenhaus", "HP", "Frank Schrader", "51078", "DEHP2002403697", "", "2026-10-09"], ["Philipp Wiedenhaus", "HP", "Margrit Regina Maria Hahn", "51496", "DEHP9002134418", "", "2026-10-16"], ["Philipp Wiedenhaus", "HP", "Gablan Sahin", "51065", "DEHP4002418235", "", "2026-10-19"], ["Philipp Wiedenhaus", "PV", "Gablan Sahin", "51065", "DE004855486", "", "2026-10-19"], ["Philipp Wiedenhaus", "HP", "Yusuf-Aslan Sahin", "", "DEHP0002373328", "", "2026-10-20"], ["Salomon Ghebremeskel", "HP", "Annelie Ruf", "46259", "DEHP6002174321", "2026-10-05 02:00", "2026-10-05"], ["Salomon Ghebremeskel", "PV", "Ioan Naros", "46415", "DE004719177", "", "2026-10-06"], ["Salomon Ghebremeskel", "HP", "Kevin Ludwig", "46453", "DEHP4001858310", "2026-10-08 02:00", "2026-10-08"], ["Salomon Ghebremeskel", "HP", "Michael te Kaeth", "46783", "DEHP1002405461", "2026-10-09 02:00", "2026-10-09"], ["Salomon Ghebremeskel", "PV", "Erjon Topi", "40918", "DEPV6002415504", "", "2026-10-12"], ["Salomon Ghebremeskel", "PV", "Berfin Ay", "47229", "DE004853404", "", "2026-10-19"], ["Salomon Ghebremeskel", "HP", "Berfin Ay", "47229", "DEHP0002415842", "", "2026-10-19"], ["Scarlet Chouh", "PV", "Alexander Lemke", "50202", "DE004474663", "", "2026-10-05"], ["Scarlet Chouh", "HP", "Alexander Lemke", "50202", "DEHP0001961314", "", "2026-10-05"], ["Scarlet Chouh", "HP", "Dawid Daniel Kruger", "50672", "DEHP5002464793", "", "2026-10-21"], ["Scarlet Chouh", "PV", "Dawid Krüger", "50672", "DE004883436", "", "2026-10-21"], ["Stefan Minetzke", "PV", "Tim Greulich", "6158", "DE002933088", "", "2026-10-09"], ["Stefan Minetzke", "HP", "Hermann Schuh", "51353", "DEHP7002286709", "", "2026-10-13"], ["Suzan Reichberg", "HP", "Barbara Claudia Wittenberg", "43458", "DEHP0002322824", "2026-10-06 19:27", "2026-10-06"], ["Suzan Reichberg", "HP", "Frank Andreas Tesch", "42772", "DEHP1002368675", "2026-10-15 18:50", "2026-10-15"], ["Suzan Reichberg", "HP", "Marion Domogalski", "42531", "DEHP5002352413", "2026-10-13 12:18", "2026-10-15"], ["Suzan Reichberg", "PV", "Heiner Lennackers", "43602", "DE004497246", "2026-10-20 19:33", "2026-10-19"], ["Suzan Reichberg", "PV", "Barbara Witzel", "37604", "DEPV7002278846", "2026-10-16 16:42", "2026-10-19"], ["Suzan Reichberg", "PV", "Heinrich Netz", "43275", "DE004854697", "2026-10-20 09:36", "2026-10-20"], ["Suzan Reichberg", "PV", "Fazelrab Hakimi", "42415", "DE004818102", "", "2026-10-20"], ["Suzan Reichberg", "HP", "Fazelrab Hakimi", "42415", "DEHP4002366948", "", "2026-10-20"], ["Özkan Tunca", "HP", "Nikolaus Franz Rahner", "46893", "DEHP0002328190", "2026-10-01 02:00", "2026-10-01"], ["Özkan Tunca", "HP", "Lukas Dick", "48303", "DEHP4002360654", "2026-10-09 02:00", "2026-10-09"], ["Özkan Tunca", "HP", "Patrik Schneider", "46919", "DEHP8000937528", "2026-10-10 02:00", "2026-10-10"], ["Özkan Tunca", "PV", "Patrick Michely", "40785", "DEPV6002398383", "2026-10-20 14:34", "2026-10-13"], ["Özkan Tunca", "PV", "Ivo Reinhardt", "47537", "DE004731939", "2026-10-19 10:14", "2026-10-16"], ["Özkan Tunca", "HP", "Ivo Reinhardt", "47537", "DEHP0002256602", "2026-10-16 15:43", "2026-10-19"], ["Özkan Tunca", "PV", "Petru Paladi", "38707", "DEPV4002313714", "2026-10-17 15:08", "2026-10-20"]];
+
+function teamOf(db){ for (const g of TEAMS) if (g.dbs.includes(db)) return g.team; return ""; }
+function fmt(ts){ return ts ? ts.slice(8,10) + "." + ts.slice(5,7) + (ts.length > 10 ? " " + ts.slice(11) : "") : ""; }
+function renderDone(){
+ const list = DONE.filter(r => inTf(r[6], TF) && (PR === "all" || r[1] === PR.toUpperCase()))
+  .map(r => [teamOf(r[0])].concat(r)).filter(r => r[0] !== "")
+  .sort((a, b) => a[0].localeCompare(b[0]) || a[1].localeCompare(b[1]) || a[7].localeCompare(b[7]));
+ document.getElementById("done").innerHTML = list.length ? list.map(r => {
+  const cmt = r[2] === "PV" ? `TBK in Salesforce: DocumentCollection am ${fmt(r[7])} abgeschlossen` : `TBK in Pipedrive: Subsidy Open am ${fmt(r[7])} erreicht`;
+  const fcs = r[6] ? fmt(r[6]) : '<span class="note">kein Abschluss in SalesOS</span>';
+  return `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[3].replace(/\s+/g, " ").trim()}</td><td class="id">${r[4] || "–"}</td><td>${r[2]}</td><td class="id">${r[5]}</td><td>${fcs}</td><td class="cmt">${cmt}</td></tr>`;
+ }).join("") : `<tr><td colspan="8" class="note">Keine TBKs in diesem Zeitraum.</td></tr>`;
+}
+document.querySelectorAll("#seg-tf button").forEach(b => b.addEventListener("click", () => { TF = b.dataset.tf; render(); renderDone(); }));
+document.querySelectorAll("#seg-pr button").forEach(b => b.addEventListener("click", () => { PR = b.dataset.pr; render(); renderDone(); }));
+render();
+renderDone();
+</script>
